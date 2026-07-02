@@ -12,6 +12,10 @@ ADMIN_IDS: list[int] = [
     if uid.strip().isdigit()
 ]
 
+# ─── Webhook ──────────────────────────────────────────────────────────────────
+WEBHOOK_URL: str = os.getenv("WEBHOOK_URL", "")
+PORT: int = int(os.getenv("PORT", "8080"))
+
 # ─── Groq AI ──────────────────────────────────────────────────────────────────
 GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 

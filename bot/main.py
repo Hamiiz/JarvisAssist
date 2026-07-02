@@ -118,9 +118,21 @@ def main() -> None:
     # Global Error Handler
     app.add_error_handler(error_handler)
 
-    # ── Run Polling ──
-    logger.info("Starting Telegram Bot (Long Polling)...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    # Start the Bot (Webhook or Polling)
+    from config import WEBHOOK_URL, PORT
+
+    if WEBHOOK_URL:
+        logger.info(f"Starting Webhook on port {PORT} at {WEBHOOK_URL}")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            secret_token=TELEGRAM_TOKEN, # optional security measure
+            webhook_url=f"{WEBHOOK_URL.rstrip('/')}/{TELEGRAM_TOKEN}",
+            url_path=TELEGRAM_TOKEN
+        )
+    else:
+        logger.info("Starting long polling...")
+        app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
