@@ -1,0 +1,21 @@
+[Unit]
+Description=HmassAssistant Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=your_linux_user
+Group=your_linux_group
+WorkingDirectory=/path/to/Hmasssistant
+# Path to your virtual environment Python
+ExecStart=/path/to/Hmasssistant/venv/bin/python -m bot.main
+
+# Auto-restart if it crashes
+Restart=always
+RestartSec=5
+
+# Environment file (optional if you want to define env vars here)
+# EnvironmentFile=/path/to/Hmasssistant/.env
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: hmassassistant_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    # Optionally limit resources
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.50'
+    #       memory: 512M
