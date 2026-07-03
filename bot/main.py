@@ -148,7 +148,6 @@ def main() -> None:
             port=PORT,
             url_path=webhook_path,
             webhook_url=full_webhook_url,
-            secret_token=TELEGRAM_TOKEN,
             allowed_updates=Update.ALL_TYPES,
         )
     else:
