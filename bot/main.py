@@ -83,8 +83,19 @@ async def post_init(app: Application) -> None:
 
 
 def main() -> None:
-    if not TELEGRAM_TOKEN or not GROQ_API_KEY:
-        logger.error("Missing TELEGRAM_TOKEN or GROQ_API_KEY in .env file!")
+    if not TELEGRAM_TOKEN:
+        logger.error(
+            "TELEGRAM_TOKEN is not set! "
+            "Set it via: fly secrets set TELEGRAM_TOKEN=\"your_token\" "
+            "or add it to your .env file."
+        )
+        sys.exit(1)
+    if not GROQ_API_KEY:
+        logger.error(
+            "GROQ_API_KEY is not set! "
+            "Set it via: fly secrets set GROQ_API_KEY=\"your_key\" "
+            "or add it to your .env file."
+        )
         sys.exit(1)
 
     # Build Application
@@ -109,8 +120,12 @@ def main() -> None:
     app.add_handler(CommandHandler("admin", cmd_admin, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("cancel", cmd_cancel, filters=filters.ChatType.PRIVATE))
 
-    # Media / Text Handlers (Restricted to private chats, includes Business Messages)
-    app.add_handler(MessageHandler(filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND, handle_text_message))
+    # Text messages — private chats AND Telegram Business messages
+    app.add_handler(MessageHandler(
+        (filters.ChatType.PRIVATE | filters.UpdateType.BUSINESS_MESSAGE) 
+        & filters.TEXT & ~filters.COMMAND, 
+        handle_text_message
+    ))
 
     # Callbacks (Inline Keyboards)
     app.add_handler(CallbackQueryHandler(callback_router))
@@ -122,16 +137,23 @@ def main() -> None:
     from config import WEBHOOK_URL, PORT
 
     if WEBHOOK_URL:
-        logger.info(f"Starting Webhook on port {PORT} at {WEBHOOK_URL}")
+        # Webhook mode — used in production (Fly.io, Render, VPS, etc.)
+        # The bot spins up a real HTTP server that Telegram pushes updates to.
+        # This also satisfies Fly.io's port 8080 health check.
+        webhook_path = "telegram-webhook"
+        full_webhook_url = f"{WEBHOOK_URL.rstrip('/')}/{webhook_path}"
+        logger.info("Starting Webhook mode on port %s → %s", PORT, full_webhook_url)
         app.run_webhook(
             listen="0.0.0.0",
             port=PORT,
-            secret_token=TELEGRAM_TOKEN, # optional security measure
-            webhook_url=f"{WEBHOOK_URL.rstrip('/')}/{TELEGRAM_TOKEN}",
-            url_path=TELEGRAM_TOKEN
+            url_path=webhook_path,
+            webhook_url=full_webhook_url,
+            secret_token=TELEGRAM_TOKEN,
+            allowed_updates=Update.ALL_TYPES,
         )
     else:
-        logger.info("Starting long polling...")
+        # Polling mode — used locally (no public URL needed)
+        logger.info("No WEBHOOK_URL set — starting long polling mode...")
         app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
