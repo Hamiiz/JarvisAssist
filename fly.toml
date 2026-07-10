@@ -19,12 +19,7 @@ primary_region = 'ams'
   min_machines_running = 1
   processes = ['app']
 
-  [[http_service.checks]]
-    grace_period = '30s'
-    interval = '30s'
-    method = 'GET'
-    timeout = '10s'
-    path = '/telegram-webhook'
+
 
 # Explicit deploy strategy: only 1 machine, no rolling deploy
 # (SQLite volume can only be attached to 1 machine at a time)
