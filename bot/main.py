@@ -197,8 +197,13 @@ async def main_async():
     app.add_handler(CommandHandler("subscribe", cmd_subscribe, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("cancel", cmd_cancel, filters=filters.ChatType.PRIVATE))
 
-    # Business connection lifecycle updates (intercepted globally)
-    app.add_handler(TypeHandler(Update, handle_update_generic))
+    # Business connection lifecycle updates (intercepted globally).
+    #
+    # TypeHandler(Update, ...) matches every update, including callback
+    # queries. In the default group it was selected before the callback
+    # handlers below, swallowing button presses and leaving Telegram's
+    # loading indicator active. Use a separate group so both can run.
+    app.add_handler(TypeHandler(Update, handle_update_generic), group=-1)
 
     # Stars In-App Payments
     app.add_handler(PreCheckoutQueryHandler(handle_pre_checkout))
