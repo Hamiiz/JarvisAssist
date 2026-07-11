@@ -20,6 +20,7 @@ class GroqClient:
         history: list[dict],
         system_prompt: str,
         temperature: float = 0.75,
+        model_name: Optional[str] = None,
         max_retries: int = 3,
         rate_limit_msg: str = "⚠️ I'm currently overwhelmed with messages. Please try again later!",
     ) -> str:
@@ -43,7 +44,7 @@ class GroqClient:
             try:
                 response = await self.client.chat.completions.create(
                     messages=messages,
-                    model=self.model_name,
+                    model=model_name or self.model_name,
                     temperature=temperature,
                     max_tokens=1024,
                 )

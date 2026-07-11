@@ -197,8 +197,13 @@ async def main_async():
     app.add_handler(CommandHandler("subscribe", cmd_subscribe, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("cancel", cmd_cancel, filters=filters.ChatType.PRIVATE))
 
-    # Business connection lifecycle updates (intercepted globally)
-    app.add_handler(TypeHandler(Update, handle_update_generic))
+    # Business connection lifecycle updates (intercepted globally).
+    #
+    # TypeHandler(Update, ...) matches every update, including callback
+    # queries. In the default group it was selected before the callback
+    # handlers below, swallowing button presses and leaving Telegram's
+    # loading indicator active. Use a separate group so both can run.
+    app.add_handler(TypeHandler(Update, handle_update_generic), group=-1)
 
     # Stars In-App Payments
     app.add_handler(PreCheckoutQueryHandler(handle_pre_checkout))
@@ -209,11 +214,15 @@ async def main_async():
     app.add_handler(CallbackQueryHandler(platform_callback_router, pattern="^platform_"))
     app.add_handler(CallbackQueryHandler(handle_subscribe_callbacks, pattern="^sub_"))
 
-    # Chat Messages (DMs to bot + Telegram Business messages)
+    # Chat messages. Keep business messages explicit: they carry the business
+    # connection ID needed to send a reply on behalf of the connected account.
     app.add_handler(MessageHandler(
-        (filters.ChatType.PRIVATE | filters.UpdateType.BUSINESS_MESSAGE) 
-        & filters.TEXT & ~filters.COMMAND, 
-        handle_text_message
+        filters.UpdateType.BUSINESS_MESSAGE & filters.TEXT & ~filters.COMMAND,
+        handle_text_message,
+    ))
+    app.add_handler(MessageHandler(
+        filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND,
+        handle_text_message,
     ))
 
     app.add_error_handler(error_handler)
