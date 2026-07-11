@@ -75,7 +75,9 @@ async def telegram_webhook_handler(request: web.Request) -> web.Response:
     try:
         data = await request.json()
         update = Update.de_json(data, app.bot)
-        await app.update_queue.put(update)
+        # Process the update directly since we are using a custom aiohttp server
+        # (avoiding queue-based routing which is only active during polling/run_webhook)
+        await app.process_update(update)
         return web.Response(status=200, text="OK")
     except Exception as e:
         logger.error("Error processing telegram update: %s", e)
