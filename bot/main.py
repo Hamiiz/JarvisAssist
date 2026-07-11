@@ -184,7 +184,6 @@ async def main_async():
     # Manually run initialization of database & resources
     await post_init(app)
     await app.initialize()
-    await app.start()
 
     # ── Register Handlers ──
     # Commands
@@ -226,6 +225,9 @@ async def main_async():
     ))
 
     app.add_error_handler(error_handler)
+
+    # Start processing only after every handler has been registered.
+    await app.start()
 
     # Create aiohttp web server for Telegram Webhook, Stripe Webhook, and Fly Health Checks
     web_app = web.Application()

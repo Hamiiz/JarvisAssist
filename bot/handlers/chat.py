@@ -53,8 +53,14 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     # ── Business Messages ───────────────────────────────────────────────────
     tenant_id = update.business_message.business_connection_id
     tenant = await tenant_mgr.get_tenant(tenant_id)
-    if not tenant or tenant["status"] == "cancelled":
-        return  # Silently ignore if not registered or cancelled
+    if not tenant:
+        logger.warning("Auto-reply skipped: unknown business connection %s", tenant_id)
+        return
+    if tenant["status"] == "cancelled":
+        logger.info("Auto-reply skipped: cancelled connection %s", tenant_id)
+        return
+
+    logger.info("Business DM received: connection=%s chat=%s sender=%s", tenant_id, chat_id, uid)
 
     # Check if the message is outgoing (from the business owner themselves or the bot)
     is_outgoing = False
@@ -85,8 +91,10 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Check activation & quota
     if not await tenant_mgr.is_active(tenant_id):
+        logger.info("Auto-reply skipped: inactive tenant %s (status=%s)", tenant_id, tenant["status"])
         return
     if not await tenant_mgr.check_quota(tenant_id):
+        logger.info("Auto-reply skipped: reply quota reached for tenant %s", tenant_id)
         return
 
     settings = await db.get_all_settings(tenant_id)
@@ -141,6 +149,7 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         _pending_tasks[chat_id].cancel()
 
     delay = int(settings.get("reply_delay", "10"))
+    logger.info("Auto-reply scheduled: connection=%s chat=%s delay=%ss", tenant_id, chat_id, delay)
     task = asyncio.create_task(
         _process_delayed_messages(chat_id, tenant_id, update, context, settings, features, delay)
     )
@@ -277,6 +286,7 @@ async def _process_delayed_messages(
             text=ai_reply,
             business_connection_id=tenant_id,
         )
+        logger.info("Auto-reply sent: connection=%s chat=%s", tenant_id, chat_id)
     except Exception as e:
         logger.error("Failed to send AI reply to chat %s: %s", chat_id, e)
 
