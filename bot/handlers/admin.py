@@ -1,5 +1,4 @@
 import logging
-
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
@@ -9,21 +8,18 @@ logger = logging.getLogger(__name__)
 
 
 async def cmd_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Entry point for the admin dashboard."""
+    """Entry point for the SaaS Platform Admin dashboard (you only)."""
     user = update.effective_user
     if not is_admin(user.id):
         return
 
-    text, markup = await build_main_menu(context)
+    text, markup = await build_platform_menu(context)
     await update.message.reply_text(text, reply_markup=markup, parse_mode="Markdown")
 
 
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Cancel any active admin input flow."""
+    """Cancel any active input flow (works for both tenants and platform admin)."""
     user = update.effective_user
-    if not is_admin(user.id):
-        return
-
     admin_states = context.bot_data.get("admin_states", {})
     if user.id in admin_states:
         del admin_states[user.id]
@@ -32,34 +28,49 @@ async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("No active action to cancel.")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Menu Builders
-# ─────────────────────────────────────────────────────────────────────────────
+async def build_platform_menu(context: ContextTypes.DEFAULT_TYPE) -> tuple[str, InlineKeyboardMarkup]:
+    """Build the platform owner dashboard menu."""
+    db = context.bot_data["db"]
+    stats = await db.get_platform_stats()
 
-async def build_main_menu(context: ContextTypes.DEFAULT_TYPE) -> tuple[str, InlineKeyboardMarkup]:
-    """Build the main dashboard view."""
-    settings = await context.bot_data["db"].get_all_settings()
-    bot_name = settings.get("bot_name", "HmassAssistant")
+    # Calculate approximate MRR
+    # Starter = $5, Pro = $15, Business = $40
+    tenant_mgr = context.bot_data["tenant_mgr"]
+    tenants = await tenant_mgr.get_all_tenants()
+    
+    mrr = 0
+    active_count = 0
+    for t in tenants:
+        if t["status"] == "active":
+            active_count += 1
+            plan = t["plan"]
+            if plan == "starter":
+                mrr += 5
+            elif plan == "pro":
+                mrr += 15
+            elif plan == "business":
+                mrr += 40
 
     text = (
-        f"🤖 *{bot_name} Control Panel*\n\n"
-        "Welcome to the admin dashboard. What would you like to manage?"
+        "🏢 *JarvisAssist Platform Dashboard*\n\n"
+        f"👥 Total Tenants: *{stats['total_tenants']}*\n"
+        f"🟢 Active Tenants: *{active_count}* (out of {stats['active_tenants']} active/trial)\n"
+        f"💰 Est. Card MRR: *${mrr}*\n"
+        f"🤖 Total AI replies today: *{stats['today_ai']}*\n"
+        f"📈 Total AI replies lifetime: *{stats['total_ai_used']:,}*"
     )
+
     keyboard = [
         [
-            InlineKeyboardButton("⚙️ Settings",   callback_data="menu_settings"),
-            InlineKeyboardButton("🧩 Features",   callback_data="menu_features"),
+            InlineKeyboardButton("👥 All Tenants", callback_data="platform_tenants_page_0"),
+            InlineKeyboardButton("📊 System Stats", callback_data="platform_stats"),
         ],
         [
-            InlineKeyboardButton("🎭 Persona",    callback_data="menu_persona"),
-            InlineKeyboardButton("📖 FAQ Data",   callback_data="menu_faq"),
+            InlineKeyboardButton("⚠️ Suspend Tenant", callback_data="platform_suspend_prompt"),
+            InlineKeyboardButton("🎁 Gift Plan", callback_data="platform_gift_prompt"),
         ],
         [
-            InlineKeyboardButton("👥 Users",      callback_data="menu_users"),
-            InlineKeyboardButton("📊 Analytics",  callback_data="menu_analytics"),
-        ],
-        [
-            InlineKeyboardButton("📢 Broadcast",  callback_data="action_broadcast"),
-        ],
+            InlineKeyboardButton("📢 Broadcast to Owners", callback_data="platform_broadcast"),
+        ]
     ]
     return text, InlineKeyboardMarkup(keyboard)

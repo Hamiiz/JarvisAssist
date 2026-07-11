@@ -11,11 +11,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Create and set working directory
 WORKDIR /app
 
-# Install system dependencies (if any are needed by python packages like Pillow)
+# Install system dependencies (including tzdata for timezone support in schedules)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libjpeg-dev \
     zlib1g-dev \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better layer caching
@@ -29,9 +30,6 @@ RUN addgroup --system botgroup && adduser --system --group botuser
 
 # Copy the rest of the application code
 COPY . .
-
-# Create the data directory and set permissions for the non-root user
-RUN mkdir -p /app/data && chown -R botuser:botgroup /app/data
 
 # Switch to the non-root user
 USER botuser

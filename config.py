@@ -19,11 +19,57 @@ PORT: int = int(os.getenv("PORT", "8080"))
 # ─── Groq AI ──────────────────────────────────────────────────────────────────
 GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 
-# ─── Database ─────────────────────────────────────────────────────────────────
-DB_PATH: str = os.getenv("DB_PATH", "data/bot.db")
+# ─── Database (Postgres) ──────────────────────────────────────────────────────
+DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+
+# ─── Stripe ───────────────────────────────────────────────────────────────────
+STRIPE_SECRET_KEY: str    = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+
+# Stripe Payment Links — create these once in the Stripe Dashboard
+# Each link should pass client_reference_id = tenant_id (business_connection_id)
+STRIPE_LINKS: dict[str, str] = {
+    "starter":  os.getenv("STRIPE_LINK_STARTER",  ""),
+    "pro":      os.getenv("STRIPE_LINK_PRO",       ""),
+    "business": os.getenv("STRIPE_LINK_BUSINESS",  ""),
+}
+
+# ─── Subscription Plans ───────────────────────────────────────────────────────
+PLANS: dict = {
+    "trial": {
+        "label":      "Free Trial",
+        "cap":        100,
+        "stars":      0,
+        "usd_cents":  0,
+        "duration_days": 14,
+    },
+    "starter": {
+        "label":      "Starter",
+        "cap":        500,
+        "stars":      500,
+        "usd_cents":  500,   # $5.00
+    },
+    "pro": {
+        "label":      "Pro",
+        "cap":        2000,
+        "stars":      1500,
+        "usd_cents":  1500,  # $15.00
+    },
+    "business": {
+        "label":      "Business",
+        "cap":        -1,    # Unlimited (-1 = no cap)
+        "stars":      4000,
+        "usd_cents":  4000,  # $40.00
+    },
+    "owner": {
+        "label":      "Owner",
+        "cap":        -1,
+        "stars":      0,
+        "usd_cents":  0,
+    },
+}
 
 # ─── Feature Definitions ──────────────────────────────────────────────────────
-# Each feature has: label (display name), emoji, and default (on/off)
 FEATURES: dict = {
     "away_mode":   {"label": "Away Mode",           "emoji": "🌙", "default": True},
     "typing_sim":  {"label": "Typing Simulation",   "emoji": "⌨️", "default": True},
@@ -102,7 +148,7 @@ RESPONSE_LENGTH_INSTRUCTIONS: dict[str, str] = {
 # ─── Default Bot Settings ─────────────────────────────────────────────────────
 DEFAULT_SETTINGS: dict[str, str] = {
     "bot_name":           "HM Jarvis",
-    "owner_name":         "Hamza",
+    "owner_name":         "the owner",
     "personality":        "friendly",
     "custom_prompt":      "",
     "history_limit":      "20",

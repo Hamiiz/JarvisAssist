@@ -7,10 +7,8 @@ primary_region = 'ams'
 [build]
 
 [env]
-  # DB stored inside the mounted volume so it survives deploys
-  DB_PATH = '/app/data/bot.db'
 
-# Keep the bot process always alive (it's a long-running daemon, not a web server)
+# Keep the bot process always alive
 [http_service]
   internal_port = 8080
   force_https = true
@@ -19,10 +17,7 @@ primary_region = 'ams'
   min_machines_running = 1
   processes = ['app']
 
-
-
-# Explicit deploy strategy: only 1 machine, no rolling deploy
-# (SQLite volume can only be attached to 1 machine at a time)
+# Explicit deploy strategy: immediate replacement
 [deploy]
   strategy = 'immediate'
 
@@ -30,9 +25,3 @@ primary_region = 'ams'
   memory = '512mb'
   cpu_kind = 'shared'
   cpus = 1
-
-# Persistent volume for SQLite database (so data survives deploys)
-[[mounts]]
-  source = 'bot_data'
-  destination = '/app/data'
-  initial_size = '1gb'
