@@ -59,11 +59,17 @@ async def handle_subscribe_callbacks(update: Update, context: ContextTypes.DEFAU
     query = update.callback_query
     user_id = query.from_user.id
     data = query.data
+
+    # Answer immediately to stop client spinner
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
     tenant_mgr = context.bot_data["tenant_mgr"]
 
     tenant = await tenant_mgr.get_tenant_by_owner(user_id)
     if not tenant:
-        await query.answer("No tenant found.", show_alert=True)
         return
 
     tenant_id = tenant["tenant_id"]
@@ -137,8 +143,3 @@ async def handle_subscribe_callbacks(update: Update, context: ContextTypes.DEFAU
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown",
         )
-
-    try:
-        await query.answer()
-    except Exception:
-        pass

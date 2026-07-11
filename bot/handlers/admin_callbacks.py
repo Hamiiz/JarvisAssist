@@ -12,8 +12,13 @@ async def platform_callback_router(update: Update, context: ContextTypes.DEFAULT
     user_id = query.from_user.id
     data = query.data
 
+    # Answer immediately to stop client spinner
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
     if not is_admin(user_id):
-        await query.answer("Unauthorized", show_alert=True)
         return
 
     tenant_mgr = context.bot_data["tenant_mgr"]
@@ -47,23 +52,27 @@ async def platform_callback_router(update: Update, context: ContextTypes.DEFAULT
             if tenant:
                 if tenant["status"] == "suspended":
                     await tenant_mgr.unsuspend(tenant_id)
-                    await query.answer("Tenant unsuspended")
                 else:
                     await tenant_mgr.suspend(tenant_id)
-                    await query.answer("Tenant suspended")
                 await _show_tenants_list(query, context, page=0)
-            else:
-                await query.answer("Tenant not found", show_alert=True)
+
+        elif data.startswith("platform_gift_tenant_"):
+            tenant_id = data.replace("platform_gift_tenant_", "")
+            admin_states = context.bot_data.setdefault("admin_states", {})
+            admin_states[user_id] = {"awaiting": "gift_plan_tier", "target_tenant_id": tenant_id, "scope": "platform"}
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=f"🎁 Tenant: `{tenant_id}`\n\nSend the plan tier to gift (`starter`, `pro`, `business`):\n\n_(Send /cancel to abort)_",
+                parse_mode="Markdown"
+            )
 
         else:
-            await query.answer()
+            pass
 
     except Exception as e:
         logger.error("Platform admin callback error [%s]: %s", data, e)
-        await query.answer("⚠️ An error occurred.", show_alert=True)
-    finally:
         try:
-            await query.answer()
+            await query.answer("⚠️ An error occurred.", show_alert=True)
         except Exception:
             pass
 

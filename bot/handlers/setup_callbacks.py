@@ -19,10 +19,15 @@ async def setup_callback_router(update: Update, context: ContextTypes.DEFAULT_TY
     user_id = query.from_user.id
     data = query.data
 
+    # Answer immediately to stop the client loading spinner and make buttons responsive
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
     tenant_mgr = context.bot_data["tenant_mgr"]
     tenant = await tenant_mgr.get_tenant_by_owner(user_id)
     if not tenant:
-        await query.answer("No active assistant found.", show_alert=True)
         return
 
     tenant_id = tenant["tenant_id"]
@@ -54,8 +59,7 @@ async def setup_callback_router(update: Update, context: ContextTypes.DEFAULT_TY
 
         elif data.startswith("setup_toggle_"):
             feature_key = data.replace("setup_toggle_", "")
-            new_state = await db.toggle_feature(tenant_id, feature_key)
-            await query.answer(f"{'ON' if new_state else 'OFF'}")
+            await db.toggle_feature(tenant_id, feature_key)
             await _show_features_menu(query, context, tenant_id)
 
         elif data.startswith("setup_set_"):
@@ -68,7 +72,6 @@ async def setup_callback_router(update: Update, context: ContextTypes.DEFAULT_TY
                 await _prompt_setting_input(query, context, tenant_id, "custom_prompt", scope="setup")
             else:
                 await db.set_setting(tenant_id, "personality", preset_key)
-                await query.answer(f"Persona: {preset_key.capitalize()}")
                 await _show_persona_menu(query, context, tenant_id)
 
         elif data == "setup_faq_add":
@@ -77,7 +80,6 @@ async def setup_callback_router(update: Update, context: ContextTypes.DEFAULT_TY
         elif data.startswith("setup_faq_del_"):
             faq_id = int(data.replace("setup_faq_del_", ""))
             await db.delete_faq(tenant_id, faq_id)
-            await query.answer("FAQ deleted")
             await _show_faq_menu(query, context, tenant_id)
 
         elif data.startswith("setup_users_page_"):
@@ -87,31 +89,27 @@ async def setup_callback_router(update: Update, context: ContextTypes.DEFAULT_TY
         elif data.startswith("setup_user_block_"):
             uid = int(data.replace("setup_user_block_", ""))
             await db.set_blocked(tenant_id, uid, True)
-            await query.answer("User blocked")
             await _show_users_menu(query, context, tenant_id, page=0)
 
         elif data.startswith("setup_user_unblock_"):
             uid = int(data.replace("setup_user_unblock_", ""))
             await db.set_blocked(tenant_id, uid, False)
-            await query.answer("User unblocked")
             await _show_users_menu(query, context, tenant_id, page=0)
 
         elif data.startswith("setup_user_clear_"):
             uid = int(data.replace("setup_user_clear_", ""))
             await db.clear_history(tenant_id, uid)
-            await query.answer("History cleared", show_alert=True)
 
         else:
-            await query.answer()
+            pass
 
     except Exception as e:
         logger.error("Setup callback error [%s]: %s", data, e)
-        await query.answer("⚠️ An error occurred.", show_alert=True)
-    finally:
         try:
-            await query.answer()
+            await query.answer("⚠️ An error occurred.", show_alert=True)
         except Exception:
             pass
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
